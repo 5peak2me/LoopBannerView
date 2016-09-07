@@ -13,8 +13,8 @@
     <style name="CustomLinePageIndicator">
         <item name="strokeWidth">4dp</item>
         <item name="lineWidth">15dp</item>
-        <item name="unselectedColor">#FF888888</item>
-        <item name="selectedColor">#FF880000</item>
+        <item name="unselectedColor">#80b4a8a8</item>
+        <item name="selectedColor">#efeeee</item>
     </style>
 
 </resources>

@@ -11,7 +11,7 @@
         android:id="@+id/viewPager"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:lvp_delayTime="4000"
+        app:lvp_delayTime="2000"
         app:lvp_isAutoLoop="true"/>
 
     <com.jinlin.loopbannerview.LinePageIndicator
