@@ -5,12 +5,14 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="120dp"
+    android:clipChildren="false"
     tools:context="com.jinlin.loopbannerview.MainActivity">
 
     <com.jinlin.loopbannerview.LoopViewPager
         android:id="@+id/viewPager"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:clipChildren="false"
         app:lvp_delayTime="2000"
         app:lvp_isAutoLoop="true"/>
 

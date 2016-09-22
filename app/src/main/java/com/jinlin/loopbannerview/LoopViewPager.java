@@ -14,10 +14,12 @@ import android.util.AttributeSet;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView.ScaleType;
+import android.widget.Scroller;
 
 import com.bumptech.glide.Glide;
 
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,7 +47,6 @@ public class LoopViewPager extends ViewPager {
     private boolean isDetached;    //是否被回收过
     private int currentPosition;   //当前的条目位置
     private static final int MSG_AUTO_SCROLL = 0;
-    private boolean mScrollable = true;
 
     public LoopViewPager(Context context) {
         this(context, null);
@@ -60,7 +61,7 @@ public class LoopViewPager extends ViewPager {
         mIsAutoLoop = a.getBoolean(R.styleable.LoopViewPager_lvp_isAutoLoop, mIsAutoLoop);
         mDelayTime = a.getInteger(R.styleable.LoopViewPager_lvp_delayTime, mDelayTime);
         a.recycle();
-
+        setSliderTransformDuration(1000);
         setAutoLoop(mIsAutoLoop, mDelayTime);
     }
 
@@ -278,7 +279,7 @@ public class LoopViewPager extends ViewPager {
         mDelayTime = delayTime;
         if (mIsAutoLoop) {
             if (mHandler == null) {
-                mHandler = new InnerHandler(this);
+                mHandler = new LoopHandler(this);
                 mHandler.sendEmptyMessageDelayed(0, mDelayTime);
             } else {
                 mHandler.removeCallbacksAndMessages(null);
@@ -293,13 +294,11 @@ public class LoopViewPager extends ViewPager {
     }
 
     public void startScrolling() {
-        if (mScrollable) {
-            mIsAutoLoop = canRunning();
-            if (mHandler != null) {
-                mHandler.removeMessages(MSG_AUTO_SCROLL);
-                if (mIsAutoLoop) {
-                    mHandler.sendEmptyMessageDelayed(MSG_AUTO_SCROLL, mDelayTime);
-                }
+        mIsAutoLoop = canRunning();
+        if (mHandler != null) {
+            mHandler.removeMessages(MSG_AUTO_SCROLL);
+            if (mIsAutoLoop) {
+                mHandler.sendEmptyMessageDelayed(MSG_AUTO_SCROLL, mDelayTime);
             }
         }
     }
@@ -319,10 +318,10 @@ public class LoopViewPager extends ViewPager {
     /**
      * 自动轮播的Handler
      */
-    private static class InnerHandler extends Handler {
+    private static class LoopHandler extends Handler {
         private WeakReference<LoopViewPager> mViewGroup;
 
-        public InnerHandler(LoopViewPager viewGroup) {
+        LoopHandler(LoopViewPager viewGroup) {
             mViewGroup = new WeakReference<>(viewGroup);
         }
 
@@ -336,39 +335,40 @@ public class LoopViewPager extends ViewPager {
         }
     }
 
-    private class LoopAdapterWrapper extends PagerAdapter {
+    /**
+     * 用该类包装一个需要实现循环滚动的Adapter
+     */
+    private static class LoopAdapterWrapper extends PagerAdapter {
 
         private PagerAdapter mAdapter;
         private int realFirst;
         private int realLast;
 
-        public LoopAdapterWrapper(PagerAdapter adapter) {
+        LoopAdapterWrapper(PagerAdapter adapter) {
             this.mAdapter = adapter;
             realFirst = 1;
-            realLast = realFirst + getRealCount() - 1;
+            realLast = getRealCount();
         }
 
         @Override
         public int getCount() {
+            // 如果ViewPager中有两个或两个以上的Item的时候，则映射出边界Item，否则显示与内层个数一致
             return getRealCount() > 1 ? getRealCount() + 2 : getRealCount();
         }
 
         @Override
         public Object instantiateItem(ViewGroup container, int position) {
-            int realPosition = toRealPosition(position);
-            return mAdapter.instantiateItem(container, realPosition);
+            return mAdapter.instantiateItem(container, toRealPosition(position));
         }
 
         @Override
         public void destroyItem(ViewGroup container, int position, Object object) {
             boolean flag = mAdapter instanceof FragmentPagerAdapter || mAdapter instanceof FragmentStatePagerAdapter;
-            int realPosition = toRealPosition(position);
-
-            //头尾的两个一直不销毁
+            // 头尾的两个一直不销毁
             if (flag && (position <= realFirst || position >= realLast)) {
                 return;
             }
-            mAdapter.destroyItem(container, realPosition, object);
+            mAdapter.destroyItem(container, toRealPosition(position), object);
         }
 
         /**
@@ -377,24 +377,24 @@ public class LoopViewPager extends ViewPager {
          * modified     realPosition  [3,0,1,2,3,0]
          * modified     InnerPosition [4,1,2,3,4,1]
          */
-        protected int toRealPosition(int position) {
+        int toRealPosition(int position) {
             int realCount = getRealCount();
             if (realCount == 0)
                 return 0;
             int realPosition = (position - 1) % realCount;
             if (realPosition < 0)
-                realPosition = realPosition + realCount;
+                realPosition += realCount;
             return realPosition;
         }
 
         /**
-         * 根据传进来的真实位子，得到该 loopAdapter 的真实条目位置
+         * 根据传进来的真实位置，得到该 loopAdapter 的真实条目位置
          */
-        public int getInnerPosition(int realPosition) {
+        int getInnerPosition(int realPosition) {
             return realPosition + 1;
         }
 
-        public int getRealCount() {
+        int getRealCount() {
             return mAdapter.getCount();
         }
 
@@ -430,4 +430,43 @@ public class LoopViewPager extends ViewPager {
         }
     }
 
+    public void setSliderTransformDuration(int duration) {
+        FixedSpeedScroller scroller = new FixedSpeedScroller(getContext(), duration);
+        scroller.changScrollDuration(this, duration);
+    }
+
+    // FixedSpeedScroller.java
+    private static class FixedSpeedScroller extends Scroller {
+        // 默认1秒，可以通过上面的方法控制
+        private int mPagerChangeDuration = 1000;
+
+        FixedSpeedScroller(Context context, int duration) {
+            super(context);
+            // 修正banner页面切换时间
+            mPagerChangeDuration = duration;
+        }
+
+        @Override
+        public void startScroll(int startX, int startY, int dx, int dy) {
+            // Ignore received duration, use fixed one instead
+            super.startScroll(startX, startY, dx, dy, mPagerChangeDuration);
+        }
+
+        @Override
+        public void startScroll(int startX, int startY, int dx, int dy, int duration) {
+            // Ignore received duration, use fixed one instead
+            super.startScroll(startX, startY, dx, dy, mPagerChangeDuration);
+        }
+
+        void changScrollDuration(ViewPager viewPager, int duration) {
+            mPagerChangeDuration = duration;
+            try {
+                Field mScroller = ViewPager.class.getDeclaredField("mScroller");
+                mScroller.setAccessible(true);
+                mScroller.set(viewPager, this);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
 }
