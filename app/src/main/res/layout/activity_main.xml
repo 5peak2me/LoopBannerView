@@ -8,7 +8,7 @@
     android:clipChildren="false"
     tools:context="com.jinlin.loopbannerview.MainActivity">
 
-    <com.jinlin.loopbannerview.LoopViewPager
+    <com.jinlin.loopbannerview.banner.LoopViewPager
         android:id="@+id/viewPager"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -16,11 +16,21 @@
         app:lvp_delayTime="2000"
         app:lvp_isAutoLoop="true"/>
 
-    <com.jinlin.loopbannerview.LinePageIndicator
+    <com.jinlin.loopbannerview.indicator.LinePageIndicator
         android:id="@+id/linePageIndicator"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="5dp"/>
+
+    <com.jinlin.loopbannerview.indicator.CirclePageIndicator
+        android:id="@+id/circlePageIndicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentLeft="true"
+        android:layout_marginBottom="5dp"
+        android:layout_marginLeft="5dp"/>
+
 </RelativeLayout>

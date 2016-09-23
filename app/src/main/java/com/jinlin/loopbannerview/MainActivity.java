@@ -3,6 +3,10 @@ package com.jinlin.loopbannerview;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 
+import com.jinlin.loopbannerview.banner.LoopViewPager;
+import com.jinlin.loopbannerview.indicator.CirclePageIndicator;
+import com.jinlin.loopbannerview.indicator.LinePageIndicator;
+
 import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity {
@@ -16,8 +20,10 @@ public class MainActivity extends AppCompatActivity {
     private void assignViews() {
         LoopViewPager viewPager = (LoopViewPager) findViewById(R.id.viewPager);
         LinePageIndicator linePageIndicator = (LinePageIndicator) findViewById(R.id.linePageIndicator);
+        CirclePageIndicator circlePageIndicator = (CirclePageIndicator) findViewById(R.id.circlePageIndicator);
         viewPager.setData(Arrays.asList(mRes));
         linePageIndicator.setViewPager(viewPager);
+        circlePageIndicator.setViewPager(viewPager);
     }
 
 

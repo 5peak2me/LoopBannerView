@@ -1,4 +1,4 @@
-package com.jinlin.loopbannerview;
+package com.jinlin.loopbannerview.banner;
 
 import android.content.Context;
 import android.content.res.TypedArray;
@@ -6,8 +6,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Parcelable;
-import android.support.v4.app.FragmentPagerAdapter;
-import android.support.v4.app.FragmentStatePagerAdapter;
 import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.util.AttributeSet;
@@ -17,21 +15,14 @@ import android.widget.ImageView.ScaleType;
 import android.widget.Scroller;
 
 import com.bumptech.glide.Glide;
+import com.jinlin.loopbannerview.R;
+import com.jinlin.loopbannerview.ResizableImageView;
 
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 需要实现循环滚动的时候，不需要改动代码，只需要把xml的节点换成LoopViewPager就可以了
- * 如果滑动到边界的时候，出现了闪现的情况，调用setBoundaryCaching( true ), 或者 DEFAULT_BOUNDARY_CASHING 变成 true
- * 如果使用 FragmentPagerAdapter 或者 FragmentStatePagerAdapter, 必须改变Adapter，使其多创建两个条目，比如
- * original adapter position    [0,1,2,3]
- * modified adapter position  [0,1,2,3,4,5]
- * modified     realPosition  [3,0,1,2,3,0]
- * modified     InnerPosition [4,1,2,3,4,1]
- */
 public class LoopViewPager extends ViewPager {
 
     private PagerAdapter mAdapter;   //原始的Adapter
@@ -54,6 +45,10 @@ public class LoopViewPager extends ViewPager {
 
     public LoopViewPager(Context context, AttributeSet attrs) {
         super(context, attrs);
+        init(attrs);
+    }
+
+    private void init(AttributeSet attrs) {
         loopPageChangeListener = new MyOnPageChangeListener();
         super.addOnPageChangeListener(loopPageChangeListener);
 
@@ -61,7 +56,6 @@ public class LoopViewPager extends ViewPager {
         mIsAutoLoop = a.getBoolean(R.styleable.LoopViewPager_lvp_isAutoLoop, mIsAutoLoop);
         mDelayTime = a.getInteger(R.styleable.LoopViewPager_lvp_delayTime, mDelayTime);
         a.recycle();
-        setSliderTransformDuration(1000);
         setAutoLoop(mIsAutoLoop, mDelayTime);
     }
 
@@ -129,16 +123,14 @@ public class LoopViewPager extends ViewPager {
     }
 
     @Override
-    public void setCurrentItem(int item, boolean smoothScroll) {
-        int realItem = mLoopAdapter == null ? 0 : mLoopAdapter.getInnerPosition(item);
-        super.setCurrentItem(realItem, smoothScroll);
+    public void setCurrentItem(int position, boolean smoothScroll) {
+        int realPosition = mLoopAdapter == null ? 0 : mLoopAdapter.getInnerPosition(position);
+        super.setCurrentItem(realPosition, smoothScroll);
     }
 
     @Override
     public void setCurrentItem(int item) {
-        if (getCurrentItem() != item) {
-            setCurrentItem(item, true);
-        }
+        setCurrentItem(item, true);
     }
 
     @Override
@@ -150,6 +142,13 @@ public class LoopViewPager extends ViewPager {
     @Override
     public void setOnPageChangeListener(OnPageChangeListener listener) {
         mOnPageChangeListener = listener;
+    }
+
+    @Override
+    public void clearOnPageChangeListeners() {
+        if (mOnPageChangeListeners != null) {
+            mOnPageChangeListeners.clear();
+        }
     }
 
     @Override
@@ -196,21 +195,27 @@ public class LoopViewPager extends ViewPager {
     }
 
     private class MyOnPageChangeListener implements OnPageChangeListener {
+        // 上一次的偏移量
+        private float mPreviousOffset = -1;
+        // 上一次的位置
+        private float mPreviousPosition = -1;
 
         @Override
         public void onPageSelected(int position) {
             int realPosition = mLoopAdapter == null ? 0 : mLoopAdapter.toRealPosition(position);
             currentPosition = realPosition;
-
-            //分发事件给外部传进来的监听
-            if (mOnPageChangeListener != null) {
-                mOnPageChangeListener.onPageSelected(realPosition);
-            }
-            if (mOnPageChangeListeners != null) {
-                for (int i = 0, z = mOnPageChangeListeners.size(); i < z; i++) {
-                    OnPageChangeListener listener = mOnPageChangeListeners.get(i);
-                    if (listener != null) {
-                        listener.onPageSelected(realPosition);
+            if (mPreviousPosition != realPosition) {
+                mPreviousPosition = realPosition;
+                //分发事件给外部传进来的监听
+                if (mOnPageChangeListener != null) {
+                    mOnPageChangeListener.onPageSelected(realPosition);
+                }
+                if (mOnPageChangeListeners != null) {
+                    for (int i = 0, z = mOnPageChangeListeners.size(); i < z; i++) {
+                        OnPageChangeListener listener = mOnPageChangeListeners.get(i);
+                        if (listener != null) {
+                            listener.onPageSelected(realPosition);
+                        }
                     }
                 }
             }
@@ -219,7 +224,16 @@ public class LoopViewPager extends ViewPager {
         @Override
         public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
             int realPosition = mLoopAdapter == null ? 0 : mLoopAdapter.toRealPosition(position);
-
+            /*
+                positionOffset =0:滚动完成，
+                position =0 :开始的边界
+                position =mAdapter.getCount()-1:结束的边界
+             */
+            if (positionOffset == 0 && mPreviousOffset == 0 && (position == 0 || position == mLoopAdapter.getCount() - 1)) {
+                //强制回到映射位置
+                setCurrentItem(realPosition, false);
+            }
+            mPreviousOffset = positionOffset;
             //分发事件给外部传进来的监听
             if (mOnPageChangeListener != null) {
                 mOnPageChangeListener.onPageScrolled(realPosition, positionOffset, positionOffsetPixels);
@@ -228,7 +242,18 @@ public class LoopViewPager extends ViewPager {
                 for (int i = 0, z = mOnPageChangeListeners.size(); i < z; i++) {
                     OnPageChangeListener listener = mOnPageChangeListeners.get(i);
                     if (listener != null) {
-                        listener.onPageScrolled(realPosition, positionOffset, positionOffsetPixels);
+                        //如果内层的位置没有达到最后一个，内层滚动监听器正常设置
+                        if (realPosition != mLoopAdapter.getRealCount() - 1) {
+                            listener.onPageScrolled(realPosition, positionOffset, positionOffsetPixels);
+                        } else {
+                            //如果到达最后一个位置，当偏移量达到0.5以上，这告诉监听器，这个页面已经到达内层的第一个位置
+                            //否则还是最后一个位置
+                            if (positionOffset > 0.5) {
+                                listener.onPageScrolled(0, 0, 0);
+                            } else {
+                                listener.onPageScrolled(realPosition, 0, 0);
+                            }
+                        }
                     }
                 }
             }
@@ -330,7 +355,7 @@ public class LoopViewPager extends ViewPager {
             LoopViewPager viewPager = mViewGroup.get();
             if (viewPager != null) {
                 viewPager.setCurrentItem(viewPager.getCurrentItem() + 1);
-                sendEmptyMessageDelayed(0, viewPager.mDelayTime);
+                sendEmptyMessageDelayed(MSG_AUTO_SCROLL, viewPager.mDelayTime);
             }
         }
     }
@@ -338,16 +363,12 @@ public class LoopViewPager extends ViewPager {
     /**
      * 用该类包装一个需要实现循环滚动的Adapter
      */
-    private static class LoopAdapterWrapper extends PagerAdapter {
+    class LoopAdapterWrapper extends PagerAdapter {
 
         private PagerAdapter mAdapter;
-        private int realFirst;
-        private int realLast;
 
         LoopAdapterWrapper(PagerAdapter adapter) {
             this.mAdapter = adapter;
-            realFirst = 1;
-            realLast = getRealCount();
         }
 
         @Override
@@ -363,39 +384,7 @@ public class LoopViewPager extends ViewPager {
 
         @Override
         public void destroyItem(ViewGroup container, int position, Object object) {
-            boolean flag = mAdapter instanceof FragmentPagerAdapter || mAdapter instanceof FragmentStatePagerAdapter;
-            // 头尾的两个一直不销毁
-            if (flag && (position <= realFirst || position >= realLast)) {
-                return;
-            }
             mAdapter.destroyItem(container, toRealPosition(position), object);
-        }
-
-        /**
-         * original adapter position    [0,1,2,3]
-         * modified adapter position  [0,1,2,3,4,5]
-         * modified     realPosition  [3,0,1,2,3,0]
-         * modified     InnerPosition [4,1,2,3,4,1]
-         */
-        int toRealPosition(int position) {
-            int realCount = getRealCount();
-            if (realCount == 0)
-                return 0;
-            int realPosition = (position - 1) % realCount;
-            if (realPosition < 0)
-                realPosition += realCount;
-            return realPosition;
-        }
-
-        /**
-         * 根据传进来的真实位置，得到该 loopAdapter 的真实条目位置
-         */
-        int getInnerPosition(int realPosition) {
-            return realPosition + 1;
-        }
-
-        int getRealCount() {
-            return mAdapter.getCount();
         }
 
         //重写对Adapter的操作
@@ -428,6 +417,47 @@ public class LoopViewPager extends ViewPager {
         public void setPrimaryItem(ViewGroup container, int position, Object object) {
             mAdapter.setPrimaryItem(container, position, object);
         }
+
+        /**
+         * original adapter position    [0,1,2,3]
+         * modified adapter position  [0,1,2,3,4,5]
+         * modified     realPosition  [3,0,1,2,3,0]
+         * modified     InnerPosition [4,1,2,3,4,1]
+         * 根据外层position的获取内层的position
+         *
+         * @param position 外层ViewPager的position
+         * @return 外层viewPager当前数据位置对应的内层viewPager对应的位置。
+         */
+        int toRealPosition(int position) {
+            // viewPager真正的可用的个数
+            int realCount = getRealCount();
+            // 内层没有可用的Item则换回为零
+            if (realCount == 0)
+                return 0;
+            int realPosition = (position - 1) % realCount;
+            if (realPosition < 0)
+                realPosition += realCount;
+            return realPosition;
+        }
+
+        /**
+         * 根据传进来的真实位置，得到该 loopAdapter 的真实条目位置
+         *
+         * @param realPosition 内层position的位置
+         * @return 无限轮播ViewPager的切换位置
+         */
+        int getInnerPosition(int realPosition) {
+            if (getRealCount() > 1) {
+                return realPosition + 1;
+            } else return realPosition;
+        }
+
+        /**
+         * @return 内层ViewPager中可用的item个数
+         */
+        int getRealCount() {
+            return mAdapter.getCount();
+        }
     }
 
     public void setSliderTransformDuration(int duration) {
@@ -436,7 +466,7 @@ public class LoopViewPager extends ViewPager {
     }
 
     // FixedSpeedScroller.java
-    private static class FixedSpeedScroller extends Scroller {
+    class FixedSpeedScroller extends Scroller {
         // 默认1秒，可以通过上面的方法控制
         private int mPagerChangeDuration = 1000;
 

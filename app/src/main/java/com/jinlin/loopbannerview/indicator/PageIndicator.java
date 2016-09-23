@@ -1,4 +1,4 @@
-package com.jinlin.loopbannerview;
+package com.jinlin.loopbannerview.indicator;
 
 import android.support.v4.view.ViewPager;
 
