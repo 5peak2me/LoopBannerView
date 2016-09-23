@@ -16,21 +16,23 @@
         app:lvp_delayTime="2000"
         app:lvp_isAutoLoop="true"/>
 
-    <com.jinlin.loopbannerview.indicator.LinePageIndicator
-        android:id="@+id/linePageIndicator"
+    <com.jinlin.loopbannerview.indicator.CirclePageIndicator
+        android:id="@+id/circlePageIndicator"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
-        android:layout_marginBottom="5dp"/>
+        android:layout_marginBottom="5dp"
+        android:layout_marginLeft="5dp"/>
 
-    <com.jinlin.loopbannerview.indicator.CirclePageIndicator
-        android:id="@+id/circlePageIndicator"
+    <com.jinlin.loopbannerview.indicator.LinePageIndicator
+        android:id="@+id/linePageIndicator"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_alignParentLeft="true"
         android:layout_marginBottom="5dp"
         android:layout_marginLeft="5dp"/>
+
 
 </RelativeLayout>

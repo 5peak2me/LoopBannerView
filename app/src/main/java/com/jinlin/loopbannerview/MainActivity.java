@@ -2,7 +2,13 @@ package com.jinlin.loopbannerview;
 
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.view.View;
+import android.widget.ImageView;
+import android.widget.TextView;
+import android.widget.Toast;
 
+import com.bumptech.glide.Glide;
+import com.jinlin.loopbannerview.banner.BannerAdapter;
 import com.jinlin.loopbannerview.banner.LoopViewPager;
 import com.jinlin.loopbannerview.indicator.CirclePageIndicator;
 import com.jinlin.loopbannerview.indicator.LinePageIndicator;
@@ -11,17 +17,27 @@ import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity {
 
-    private String[] mRes = new String[]{
-            "http://img.alicdn.com/imgextra/i3/2563613536/TB2C0TUX8LzQeBjSZFoXXc5gFXa_!!2563613536.jpg_q50.jpg",
-            "http://img.alicdn.com/tps/TB1DA4ANXXXXXXnXVXXXXXXXXXX-1125-352.jpg_q50.jpg",
-            "http://img.alicdn.com/tps/TB1xPGCNXXXXXbpXpXXXXXXXXXX-1125-352.jpg_q50.jpg"
-    };
-
     private void assignViews() {
         LoopViewPager viewPager = (LoopViewPager) findViewById(R.id.viewPager);
         LinePageIndicator linePageIndicator = (LinePageIndicator) findViewById(R.id.linePageIndicator);
         CirclePageIndicator circlePageIndicator = (CirclePageIndicator) findViewById(R.id.circlePageIndicator);
-        viewPager.setData(Arrays.asList(mRes));
+        viewPager.setData(new BannerAdapter<String>(Arrays.asList(Images.URLS)) {
+            @Override
+            protected void bindTips(TextView tv, String o) {
+
+            }
+
+            @Override
+            protected void bindImage(ImageView imageView, String s) {
+                Glide.with(MainActivity.this).load(s).into(imageView);
+            }
+
+            @Override
+            protected void onClick(View v, int position, String s) {
+                Toast.makeText(MainActivity.this, position + "", Toast.LENGTH_SHORT).show();
+            }
+
+        });
         linePageIndicator.setViewPager(viewPager);
         circlePageIndicator.setViewPager(viewPager);
     }

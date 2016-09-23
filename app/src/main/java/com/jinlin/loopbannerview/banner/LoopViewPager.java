@@ -14,14 +14,12 @@ import android.view.ViewGroup;
 import android.widget.ImageView.ScaleType;
 import android.widget.Scroller;
 
-import com.bumptech.glide.Glide;
 import com.jinlin.loopbannerview.R;
 import com.jinlin.loopbannerview.ResizableImageView;
 
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.List;
 
 public class LoopViewPager extends ViewPager {
 
@@ -29,7 +27,6 @@ public class LoopViewPager extends ViewPager {
     private LoopAdapterWrapper mLoopAdapter;    //实现了循环滚动的Adapter
 
     private OnPageChangeListener loopPageChangeListener;  //内部定义的监听器
-    private OnPageChangeListener mOnPageChangeListener;   //外部通过set传进来的
     private ArrayList<OnPageChangeListener> mOnPageChangeListeners;   //外部通过add传进来的
 
     private Handler mHandler;  //处理轮播的Handler
@@ -138,12 +135,6 @@ public class LoopViewPager extends ViewPager {
         return mLoopAdapter == null ? 0 : mLoopAdapter.toRealPosition(super.getCurrentItem());
     }
 
-    @SuppressWarnings("deprecation")
-    @Override
-    public void setOnPageChangeListener(OnPageChangeListener listener) {
-        mOnPageChangeListener = listener;
-    }
-
     @Override
     public void clearOnPageChangeListeners() {
         if (mOnPageChangeListeners != null) {
@@ -166,11 +157,11 @@ public class LoopViewPager extends ViewPager {
         }
     }
 
-    public void setData(final List<String> data) {
+    public void setData(final BannerAdapter adapter) {
         setAdapter(new PagerAdapter() {
             @Override
             public int getCount() {
-                return data.size();
+                return adapter.getCount();
             }
 
             @Override
@@ -179,10 +170,16 @@ public class LoopViewPager extends ViewPager {
             }
 
             @Override
-            public Object instantiateItem(ViewGroup container, int position) {
+            public Object instantiateItem(ViewGroup container, final int position) {
                 ResizableImageView imageView = new ResizableImageView(getContext());
                 imageView.setScaleType(ScaleType.CENTER_CROP);
-                Glide.with(getContext()).load(data.get(position)).into(imageView);
+                adapter.bindImage(imageView, adapter.getItem(position));
+                imageView.setOnClickListener(new OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        adapter.onClick(v, position, adapter.getItem(position));
+                    }
+                });
                 container.addView(imageView);
                 return imageView;
             }
@@ -206,10 +203,7 @@ public class LoopViewPager extends ViewPager {
             currentPosition = realPosition;
             if (mPreviousPosition != realPosition) {
                 mPreviousPosition = realPosition;
-                //分发事件给外部传进来的监听
-                if (mOnPageChangeListener != null) {
-                    mOnPageChangeListener.onPageSelected(realPosition);
-                }
+                // 分发事件给外部传进来的监听
                 if (mOnPageChangeListeners != null) {
                     for (int i = 0, z = mOnPageChangeListeners.size(); i < z; i++) {
                         OnPageChangeListener listener = mOnPageChangeListeners.get(i);
@@ -225,19 +219,16 @@ public class LoopViewPager extends ViewPager {
         public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
             int realPosition = mLoopAdapter == null ? 0 : mLoopAdapter.toRealPosition(position);
             /*
-                positionOffset =0:滚动完成，
-                position =0 :开始的边界
-                position =mAdapter.getCount()-1:结束的边界
+                positionOffset = 0:滚动完成，
+                position = 0 :开始的边界
+                position = mAdapter.getCount()-1:结束的边界
              */
             if (positionOffset == 0 && mPreviousOffset == 0 && (position == 0 || position == mLoopAdapter.getCount() - 1)) {
-                //强制回到映射位置
+                // 强制回到映射位置
                 setCurrentItem(realPosition, false);
             }
             mPreviousOffset = positionOffset;
-            //分发事件给外部传进来的监听
-            if (mOnPageChangeListener != null) {
-                mOnPageChangeListener.onPageScrolled(realPosition, positionOffset, positionOffsetPixels);
-            }
+            // 分发事件给外部传进来的监听
             if (mOnPageChangeListeners != null) {
                 for (int i = 0, z = mOnPageChangeListeners.size(); i < z; i++) {
                     OnPageChangeListener listener = mOnPageChangeListeners.get(i);
@@ -282,9 +273,6 @@ public class LoopViewPager extends ViewPager {
             }
 
             //分发事件给外部传进来的监听
-            if (mOnPageChangeListener != null) {
-                mOnPageChangeListener.onPageScrollStateChanged(state);
-            }
             if (mOnPageChangeListeners != null) {
                 for (int i = 0, z = mOnPageChangeListeners.size(); i < z; i++) {
                     OnPageChangeListener listener = mOnPageChangeListeners.get(i);
@@ -460,7 +448,7 @@ public class LoopViewPager extends ViewPager {
         }
     }
 
-    public void setSliderTransformDuration(int duration) {
+    public void setTransformDuration(int duration) {
         FixedSpeedScroller scroller = new FixedSpeedScroller(getContext(), duration);
         scroller.changScrollDuration(this, duration);
     }

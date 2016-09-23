@@ -6,7 +6,7 @@
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
-        <!--<item name="android:windowTranslucentStatus">true</item>-->
+        <item name="android:windowTranslucentStatus">true</item>
         <item name="vpiCirclePageIndicatorStyle">@style/CustomCirclePageIndicator</item>
         <item name="vpiLinePageIndicatorStyle">@style/CustomLinePageIndicator</item>
     </style>
@@ -20,7 +20,7 @@
     </style>
 
     <style name="CustomLinePageIndicator">
-        <item name="strokeWidth">8dp</item>
+        <item name="strokeWidth">3dp</item>
         <item name="lineWidth">8dp</item>
         <item name="unselectedColor">#80000000</item>
         <item name="selectedColor">#efeeee</item>
